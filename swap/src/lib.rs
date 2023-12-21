@@ -19,8 +19,7 @@ impl From<usize> for SwapVersion {
         SwapVersion::Counter(value)
     }
 }
-
-pub struct Swap {
+struct Swap {
     active: Child,
     history: Vec<SwapVersion>,
     count: usize,
@@ -38,44 +37,40 @@ impl ExecShell {
     }
 }
 
-impl Runnable for ExecShell {
-    fn run(self) -> Result<Child, String> {
-        Command::new(self.0)
-            .args(self.1)
-            .spawn()
-            .map_err(|x| x.to_string())
-    }
+fn run_cmd(cmd: &mut Command) -> Result<Child, String> {
+    cmd.spawn().map_err(|e| e.to_string())
 }
 
 impl Swap {
-    pub fn start_version<R: 'static + Runnable + Send>(
-        runnable: R,
-        version: SwapVersion,
-    ) -> Result<Self, String> {
-        Ok(Self {
-            active: runnable.run()?,
-            history: vec![version],
-            count: 1,
-        })
-    }
-    pub fn start<R: 'static + Runnable + Send>(runnable: R) -> Result<Self, String> {
-        Self::start_version(runnable, 1.into())
-    }
-
-    pub fn swap_version<R: 'static + Runnable + Send>(
+    pub fn swap_version(
         &mut self,
-        runnable: R,
+        cmd: &mut Command,
         version: SwapVersion,
     ) -> Result<&Self, String> {
         self.count += 1;
         self.history.push(version);
         self.active.kill().map_err(|e| e.to_string())?;
-        self.active = runnable.run()?;
+        self.active = run_cmd(cmd)?;
         Ok(self)
     }
 
-    pub fn swap<R: 'static + Runnable + Send>(&mut self, runnable: R) -> Result<&Self, String> {
-        self.swap_version(runnable, { self.count + 1 }.into())
+    pub fn swap(&mut self, cmd: &mut Command) -> Result<&Self, String> {
+        self.swap_version(cmd, { self.count + 1 }.into())
+    }
+}
+
+pub struct SwapBuilder();
+
+impl SwapBuilder {
+    pub fn start_version(cmd: &mut Command, version: SwapVersion) -> Result<Swap, String> {
+        Ok(Swap {
+            active: run_cmd(cmd)?,
+            count: 1,
+            history: vec![version],
+        })
+    }
+    pub fn start(cmd: &mut Command) -> Result<Swap, String> {
+        Self::start_version(cmd, 1.into())
     }
 }
 
@@ -87,21 +82,19 @@ mod tests {
 
     #[test]
     fn it_starts_a_process() {
-        let swap = Swap::start(ExecShell::new("echo", vec!["foobar"]));
-        let exit = swap
-            .expect("starting proc failed")
-            .active
-            .wait()
-            .expect("active proc failed");
+        let mut swap =
+            SwapBuilder::start(Command::new("echo").arg("foobar")).expect("starting proc failed");
+        let exit = swap.active.wait().expect("active proc failed");
         assert_eq!(exit.success(), true);
     }
 
     #[test]
     fn it_swaps_a_process() {
-        let mut swap = Swap::start(ExecShell::new("sleep", vec!["10000"])).expect("started");
+        let mut swap = SwapBuilder::start(Command::new("sleep").arg("10000")).expect("");
         thread::sleep(Duration::from_millis(100));
         assert_eq!(swap.count, 1);
-        swap.swap(ExecShell::new("echo", vec!["swapped!"]));
+        swap.swap(Command::new("echo").args(vec!["swapped!"]))
+            .expect("swap failed");
         assert_eq!(swap.count, 2);
         swap.active.wait().expect("echo swapped ok");
         ()
