@@ -1,9 +1,5 @@
 use std::process::Child;
-use std::sync::mpsc;
-use std::{
-    process::Command,
-    thread::{self, JoinHandle},
-};
+use std::process::Command;
 
 pub enum SwapVersion {
     // default, naive counter
