@@ -19,22 +19,10 @@ impl From<usize> for SwapVersion {
         SwapVersion::Counter(value)
     }
 }
-struct Swap {
+pub struct Swap {
     active: Child,
     history: Vec<SwapVersion>,
     count: usize,
-}
-
-pub trait Runnable {
-    fn run(self) -> Result<Child, String>;
-}
-
-struct ExecShell(String, Vec<String>);
-
-impl ExecShell {
-    pub fn new(cmd: &str, args: Vec<&str>) -> Self {
-        Self(cmd.into(), args.iter().map(|&x| x.into()).collect())
-    }
 }
 
 fn run_cmd(cmd: &mut Command) -> Result<Child, String> {
@@ -50,6 +38,9 @@ impl Swap {
         self.count += 1;
         self.history.push(version);
         self.active.kill().map_err(|e| e.to_string())?;
+        // wait the killed process to ensure we reap the zombie.
+        // not waiting == zombie.
+        self.active.wait().map_err(|e| e.to_string())?;
         self.active = run_cmd(cmd)?;
         Ok(self)
     }
