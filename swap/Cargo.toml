@@ -14,3 +14,5 @@ name = "swaperooni"
 path = "src/bin.rs"
 
 [dependencies]
+clap = { version = "4.4.11", features = ["derive"] }
+signal-hook = "0.3.17"

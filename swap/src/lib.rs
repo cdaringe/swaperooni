@@ -1,5 +1,6 @@
 use std::process::Child;
 use std::process::Command;
+use std::process::ExitStatus;
 
 pub enum SwapVersion {
     // default, naive counter
@@ -44,6 +45,23 @@ impl Swap {
     pub fn swap(&mut self, cmd: &mut Command) -> Result<&Self, String> {
         self.swap_version(cmd, { self.count + 1 }.into())
     }
+
+    pub fn signal(&mut self, signal: i32) -> Result<(), String> {
+        dbg!("doing work i guess", signal);
+        Command::new("kill")
+            .args([format!("-{}", signal), self.active.id().to_string()])
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("failed to send signal to active proc: {}", e))
+    }
+
+    pub fn wait(&mut self) -> Result<ExitStatus, String> {
+        self.active.wait().map_err(|e| e.to_string())
+    }
+
+    pub fn try_wait(&mut self) -> Result<Option<ExitStatus>, String> {
+        self.active.try_wait().map_err(|e| e.to_string())
+    }
 }
 
 pub struct SwapBuilder();
@@ -63,7 +81,7 @@ impl SwapBuilder {
 
 #[cfg(test)]
 mod tests {
-    use std::{time::Duration, vec};
+    use std::{thread, time::Duration, vec};
 
     use super::*;
 
