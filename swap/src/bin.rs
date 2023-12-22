@@ -1,7 +1,6 @@
 use std::process::exit;
-use std::sync::Mutex;
+use std::sync::Arc;
 use std::time::Duration;
-use std::{process::Command, sync::Arc, thread};
 
 use signal_hook::{
     consts::{
@@ -20,40 +19,50 @@ use signal_hook::{
     },
     iterator::Signals,
 };
+use swaperooni::signal;
+use tokio::sync::Mutex;
 
-pub fn main() -> () {
+#[tokio::main]
+async fn main() -> () {
     let swap = Arc::new(Mutex::new(
-        swaperooni::SwapBuilder::start(Command::new("sleep").arg("1000"))
-            .expect("failed to boot first process"),
+        swaperooni::SwapBuilder::start(
+            tokio::process::Command::new("sleep")
+                .arg("1000")
+                .kill_on_drop(true),
+        )
+        .expect("failed to boot first process"),
     ));
 
-    let swap_a = swap.clone();
-    thread::spawn(move || {
+    let sig_handler_swap = swap.clone();
+    let _sigs_handle = tokio::spawn(async move {
         let mut signals =
             Signals::new(&[SIGHUP, SIGINT, SIGQUIT, SIGABRT, SIGPIPE, SIGALRM, SIGTERM])
                 .expect("failed to obtain signals");
         for sig in signals.forever() {
-            swap_a.lock().unwrap().signal(sig).unwrap();
+            if let Some(active_pid) = sig_handler_swap.lock().await.active.id() {
+                signal(active_pid, sig).unwrap();
+            }
         }
     });
 
-    let swap_b = swap.clone();
-    let proc_haltled = thread::spawn(move || loop {
-        let _ = {
-            match swap_b.lock().unwrap().try_wait() {
-                Ok(Some(status)) => exit(match status.code() {
+    loop {
+        let swap_b = swap.clone();
+
+        let proc_handle = tokio::spawn(async move {
+            // holds the lock across the await. make sure everything you need
+            // concurrently is available to other concurrent workers
+            match swap_b.lock().await.wait().await {
+                Ok(status) => exit(match status.code() {
                     Some(code) => code,
                     None => {
                         eprintln!("unable to determine exit status of child: {status}");
                         1
                     }
                 }),
-                Ok(None) => (),
                 Err(e) => panic!("failed to get status of process: {}", e),
             }
-        };
-        thread::sleep(Duration::from_secs(1));
-    });
+        });
 
-    proc_haltled.join().unwrap()
+        proc_handle.await.unwrap();
+    }
 }

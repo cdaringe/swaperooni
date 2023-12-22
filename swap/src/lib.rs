@@ -1,6 +1,6 @@
-use std::process::Child;
-use std::process::Command;
 use std::process::ExitStatus;
+
+use tokio::process::{Child, Command};
 
 pub enum SwapVersion {
     // default, naive counter
@@ -17,7 +17,7 @@ impl From<usize> for SwapVersion {
     }
 }
 pub struct Swap {
-    active: Child,
+    pub active: Child,
     history: Vec<SwapVersion>,
     count: usize,
 }
@@ -26,41 +26,37 @@ fn run_cmd(cmd: &mut Command) -> Result<Child, String> {
     cmd.spawn().map_err(|e| e.to_string())
 }
 
+pub fn signal(id: u32, signal: i32) -> Result<(), String> {
+    dbg!("doing work i guess", signal);
+    Command::new("kill")
+        .args([format!("-{}", signal), id.to_string()])
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("failed to send signal to active proc: {}", e))
+}
+
 impl Swap {
-    pub fn swap_version(
+    pub async fn swap_version(
         &mut self,
         cmd: &mut Command,
         version: SwapVersion,
     ) -> Result<&Self, String> {
         self.count += 1;
         self.history.push(version);
-        self.active.kill().map_err(|e| e.to_string())?;
+        self.active.kill().await.map_err(|e| e.to_string())?;
         // wait the killed process to ensure we reap the zombie.
         // not waiting == zombie.
-        self.active.wait().map_err(|e| e.to_string())?;
+        self.active.wait().await.map_err(|e| e.to_string())?;
         self.active = run_cmd(cmd)?;
         Ok(self)
     }
 
-    pub fn swap(&mut self, cmd: &mut Command) -> Result<&Self, String> {
-        self.swap_version(cmd, { self.count + 1 }.into())
+    pub async fn swap(&mut self, cmd: &mut Command) -> Result<&Self, String> {
+        self.swap_version(cmd, { self.count + 1 }.into()).await
     }
 
-    pub fn signal(&mut self, signal: i32) -> Result<(), String> {
-        dbg!("doing work i guess", signal);
-        Command::new("kill")
-            .args([format!("-{}", signal), self.active.id().to_string()])
-            .spawn()
-            .map(|_| ())
-            .map_err(|e| format!("failed to send signal to active proc: {}", e))
-    }
-
-    pub fn wait(&mut self) -> Result<ExitStatus, String> {
-        self.active.wait().map_err(|e| e.to_string())
-    }
-
-    pub fn try_wait(&mut self) -> Result<Option<ExitStatus>, String> {
-        self.active.try_wait().map_err(|e| e.to_string())
+    pub async fn wait(&mut self) -> Result<ExitStatus, String> {
+        self.active.wait().await.map_err(|e| e.to_string())
     }
 }
 
@@ -81,27 +77,31 @@ impl SwapBuilder {
 
 #[cfg(test)]
 mod tests {
-    use std::{thread, time::Duration, vec};
+    use std::time::Duration;
+
+    // use std::{thread, time::Duration, vec};
+    use tokio::time;
 
     use super::*;
 
-    #[test]
-    fn it_starts_a_process() {
+    #[tokio::test]
+    async fn it_starts_a_process() {
         let mut swap =
             SwapBuilder::start(Command::new("echo").arg("foobar")).expect("starting proc failed");
-        let exit = swap.active.wait().expect("active proc failed");
+        let exit = swap.active.wait().await.expect("active proc failed");
         assert_eq!(exit.success(), true);
     }
 
-    #[test]
-    fn it_swaps_a_process() {
+    #[tokio::test]
+    async fn it_swaps_a_process() {
         let mut swap = SwapBuilder::start(Command::new("sleep").arg("10000")).expect("");
-        thread::sleep(Duration::from_millis(100));
+        tokio::time::sleep(Duration::from_millis(100)).await;
         assert_eq!(swap.count, 1);
         swap.swap(Command::new("echo").args(vec!["swapped!"]))
-            .expect("swap failed");
+            .await
+            .unwrap();
         assert_eq!(swap.count, 2);
-        swap.active.wait().expect("echo swapped ok");
+        swap.active.wait().await.unwrap();
         ()
     }
 }
