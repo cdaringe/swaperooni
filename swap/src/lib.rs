@@ -27,7 +27,7 @@ fn run_cmd(cmd: &mut Command) -> Result<Child, String> {
 }
 
 pub fn signal(id: u32, signal: i32) -> Result<(), String> {
-    dbg!("doing work i guess", signal);
+    println!("sending {signal} to {id}");
     Command::new("kill")
         .args([format!("-{}", signal), id.to_string()])
         .spawn()
