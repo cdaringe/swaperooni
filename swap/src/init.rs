@@ -21,7 +21,7 @@ pub struct Init {
 }
 
 impl Init {
-    pub fn to_tup(self: Self) -> (impl Future<Output = Result<()>>, BabyCommand, BabyRx) {
+    pub fn to_tup(self) -> (impl Future<Output = Result<()>>, BabyCommand, BabyRx) {
         let Init {
             channel,
             cmd,

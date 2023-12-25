@@ -2,7 +2,7 @@ use std::process::exit;
 use swaperooni::run::run_cli;
 
 #[tokio::main]
-async fn main() -> () {
+async fn main() {
     exit(
         run_cli()
             .await

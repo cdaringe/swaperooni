@@ -27,19 +27,18 @@ pub async fn run(sr: SwapReady, rx_swap_request: BabyRx) -> Result<i32> {
     let mut swap = sr.swap;
     let rx_swap_request_arc = Arc::new(Mutex::new(rx_swap_request));
     loop {
-        dbg!("sup");
         let pid = child_arc
             .lock()
             .await
             .id()
-            .ok_or_else(|| SwapError::FailedChildBootNoPid)?;
+            .ok_or(SwapError::FailedChildBootNoPid)?;
         let signal_proxy_f = tokio::spawn(async move { proxy_common_signals(pid).await });
         let run_child = child_arc.clone();
 
         let rx_swap_request_arcx = rx_swap_request_arc.clone();
         select! {
           halted = tokio::spawn(async move { run_child.lock().await.wait().await }) => {
-            match halted.unwrap() {
+            match halted? {
               // Getting the exit code apparently isn't so staightforward according to rust.
               // https://doc.rust-lang.org/std/process/struct.ExitStatus.html#method.code
               Ok(status) => return Ok(status.code().map_or_else(|| 1, |code| code)),
@@ -52,10 +51,7 @@ pub async fn run(sr: SwapReady, rx_swap_request: BabyRx) -> Result<i32> {
             // return swap_error
           }
           next_cmd_opt = tokio::spawn(async move { rx_swap_request_arcx.lock().await.recv() }) => {
-            let next_cmd = match next_cmd_opt.unwrap() {
-              Ok(sr) => sr,
-              _ => return Err(SwapError::ListenerHalted.into())
-            };
+            let next_cmd = next_cmd_opt?.map_err(|_| SwapError::ListenerHalted)?;
             let next_sr = swap.swap(&next_cmd).await?;
             *child_arc.lock().await = next_sr.child;
             swap = next_sr.swap;

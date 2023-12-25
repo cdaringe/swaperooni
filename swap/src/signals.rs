@@ -1,6 +1,3 @@
-use std::sync::{Arc, Mutex};
-
-use anyhow::Result;
 use signal_hook::{
     consts::{
         SIGABRT,
@@ -22,7 +19,7 @@ use signal_hook::{
 use crate::{error::SwapError, swap::signal};
 
 pub async fn proxy_common_signals(pid: u32) -> SwapError {
-    let mut signals = Signals::new(&[SIGHUP, SIGINT, SIGQUIT, SIGABRT, SIGPIPE, SIGALRM, SIGTERM])
+    let mut signals = Signals::new([SIGHUP, SIGINT, SIGQUIT, SIGABRT, SIGPIPE, SIGALRM, SIGTERM])
         .expect("failed to obtain signals");
     for sig in signals.forever() {
         match signal(pid, sig).await {

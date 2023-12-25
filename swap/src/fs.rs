@@ -1,6 +1,5 @@
 use anyhow::Result;
 use std::time::SystemTime;
-use tokio;
 
 pub async fn get_modified(path: &str) -> Result<u128> {
     Ok(tokio::fs::metadata(path)

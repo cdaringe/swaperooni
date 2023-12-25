@@ -47,10 +47,7 @@ async fn get_pid_and_child(cmd: &BabyCommand) -> Result<(u32, Child)> {
                 Some(pid) => {
                     return Ok((pid, child));
                 }
-                None => {
-                    tokio::time::sleep(Duration::from_millis(50)).await;
-                    ()
-                }
+                None => tokio::time::sleep(Duration::from_millis(50)).await,
             }
             tries -= 1;
         }
@@ -88,7 +85,7 @@ impl Swap {
     ) -> Result<SwapReady> {
         signal(self.pid, 9).await?;
         let (pid, child) = get_pid_and_child(cmd).await?;
-        let next_count = self.count.clone() + 1;
+        let next_count = self.count + 1;
         Ok(SwapReady {
             child,
             swap: Swap {
@@ -118,7 +115,7 @@ impl SwapBuilder {
         Self::new_version(cmd, 1.into())
     }
 
-    pub async fn start(self: Self) -> Result<SwapReady> {
+    pub async fn start(self) -> Result<SwapReady> {
         let (pid, child) = get_pid_and_child(&self.cmd).await?;
         Ok(SwapReady {
             child,
@@ -135,34 +132,3 @@ pub struct SwapReady {
     pub child: Child,
     pub swap: Swap,
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use std::time::Duration;
-
-//     // use std::{thread, time::Duration, vec};
-//     use tokio::time;
-
-//     use super::*;
-
-//     #[tokio::test]
-//     async fn it_starts_a_process() {
-//         let mut swap =
-//             SwapBuilder::start(Command::new("echo").arg("foobar")).expect("starting proc failed");
-//         let exit = swap.active.wait().await.expect("active proc failed");
-//         assert_eq!(exit.success(), true);
-//     }
-
-//     #[tokio::test]
-//     async fn it_swaps_a_process() {
-//         let mut swap = SwapBuilder::start(Command::new("sleep").arg("10000")).expect("");
-//         tokio::time::sleep(Duration::from_millis(100)).await;
-//         assert_eq!(swap.count, 1);
-//         swap.swap(Command::new("echo").args(vec!["swapped!"]))
-//             .await
-//             .unwrap();
-//         assert_eq!(swap.count, 2);
-//         swap.active.wait().await.unwrap();
-//         ()
-//     }
-// }
