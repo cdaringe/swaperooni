@@ -1,24 +1,45 @@
-use crate::{baby_cmd::BabyCommand, cli::PollCmd, error::SwapError, poll::poll_modified};
+use crate::{
+    baby_cmd::BabyCommand,
+    cli::{PollCmd, SwapCmd},
+    error::SwapError,
+    poll::poll_modified,
+};
 use anyhow::Result;
-use std::sync::mpsc::{Receiver, Sender};
+use std::{
+    future::Future,
+    sync::mpsc::{Receiver, Sender},
+};
 
 pub type BabyTx = Sender<BabyCommand>;
 pub type BabyRx = Receiver<BabyCommand>;
 pub type BabyCommandChannel = (BabyTx, BabyRx);
 
-pub struct Init<T> {
-    t: T,
+pub struct Init {
+    swap_cmd: SwapCmd,
     pub cmd: BabyCommand,
     pub channel: BabyCommandChannel,
 }
 
-impl<T> Init<T> {
-    pub fn to_tup(self: Self) -> (T, BabyCommand, BabyCommandChannel) {
-        (self.t, self.cmd, self.channel)
+impl Init {
+    pub fn to_tup(self: Self) -> (impl Future<Output = Result<()>>, BabyCommand, BabyRx) {
+        let Init {
+            channel,
+            cmd,
+            swap_cmd: command,
+        } = self;
+        let (tx, rx) = channel;
+        (
+            match command {
+                SwapCmd::Poll(poll) => listen(poll, cmd.clone(), tx),
+                SwapCmd::Ipc(_) => todo!(),
+            },
+            cmd,
+            rx,
+        )
     }
 }
 
-pub async fn listen(poll: PollCmd, cmd: &BabyCommand, tx: BabyTx) -> Result<()> {
+pub async fn listen(poll: PollCmd, cmd: BabyCommand, tx: BabyTx) -> Result<()> {
     let next_cmd = cmd.clone();
     poll_modified(poll, || {
         tx.send(next_cmd.clone())
@@ -27,13 +48,20 @@ pub async fn listen(poll: PollCmd, cmd: &BabyCommand, tx: BabyTx) -> Result<()> 
     .await
 }
 
-impl From<PollCmd> for Init<PollCmd> {
-    fn from(t: PollCmd) -> Self {
-        let cmd = BabyCommand {
-            bin: t.exe.to_owned(),
-            args: vec![],
-        };
+impl From<SwapCmd> for Init {
+    fn from(swap_cmd: SwapCmd) -> Self {
         let channel: BabyCommandChannel = std::sync::mpsc::channel();
-        Init { t, cmd, channel }
+        let cmd = match swap_cmd {
+            SwapCmd::Poll(ref poll) => BabyCommand {
+                bin: poll.exe.clone(),
+                args: vec![],
+            },
+            SwapCmd::Ipc(_) => todo!(),
+        };
+        Init {
+            swap_cmd,
+            cmd,
+            channel,
+        }
     }
 }

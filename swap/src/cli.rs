@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 #[command(propagate_version = true)]
 pub struct Cli {
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: SwapCmd,
 }
 
 #[derive(Clone, Parser, Debug)]
@@ -23,7 +23,7 @@ pub struct PollCmd {
 }
 
 #[derive(Clone, Subcommand, Debug)]
-pub enum Commands {
+pub enum SwapCmd {
     Poll(PollCmd),
     Ipc(IpcCmd),
 }
