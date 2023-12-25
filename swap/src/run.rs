@@ -25,7 +25,7 @@ pub async fn run_cli() -> Result<i32> {
     let running = run(sr, rx);
 
     select! {
+      _ = listener => Err(SwapError::ListenerHalted.into()),
       proc_halted_result = running => proc_halted_result,
-      _ = listener => Err(SwapError::ListenerHalted.into())
     }
 }

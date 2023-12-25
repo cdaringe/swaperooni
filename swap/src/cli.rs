@@ -18,7 +18,7 @@ pub struct PollCmd {
     /// Name of the person to greet
     pub exe: String,
 
-    #[arg(short = 'i', long, default_value_t = 10_000)]
+    #[arg(short = 'i', long, default_value_t = 4_000)]
     pub poll_interval_ms: u64,
 }
 

@@ -1,6 +1,6 @@
-use crate::{baby_cmd::BabyCommand, cli::PollCmd, poll::poll_modified};
+use crate::{baby_cmd::BabyCommand, cli::PollCmd, error::SwapError, poll::poll_modified};
 use anyhow::Result;
-use tokio::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Receiver, Sender};
 
 pub type BabyTx = Sender<BabyCommand>;
 pub type BabyRx = Receiver<BabyCommand>;
@@ -20,11 +20,9 @@ impl<T> Init<T> {
 
 pub async fn listen(poll: PollCmd, cmd: &BabyCommand, tx: BabyTx) -> Result<()> {
     let next_cmd = cmd.clone();
-    poll_modified(poll, || match tokio::runtime::Handle::try_current() {
-        Ok(rt) => rt
-            .block_on(async { tx.send(next_cmd.clone()).await })
-            .map_err(|_| panic!("local channel unavailable")),
-        Err(_) => panic!("impossible case: missing runtime"),
+    poll_modified(poll, || {
+        tx.send(next_cmd.clone())
+            .map_err(|_| SwapError::ListenerChannelDown.into())
     })
     .await
 }
@@ -35,7 +33,7 @@ impl From<PollCmd> for Init<PollCmd> {
             bin: t.exe.to_owned(),
             args: vec![],
         };
-        let channel: BabyCommandChannel = tokio::sync::mpsc::channel(1);
+        let channel: BabyCommandChannel = std::sync::mpsc::channel();
         Init { t, cmd, channel }
     }
 }

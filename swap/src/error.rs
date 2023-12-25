@@ -14,6 +14,9 @@ pub enum SwapError {
     #[error("waiting for process failed {message:?}")]
     ProcWaitFail { message: String },
 
+    #[error("swap event listener channel down")]
+    ListenerChannelDown,
+
     #[error("swap event listener halted")]
     ListenerHalted,
 
