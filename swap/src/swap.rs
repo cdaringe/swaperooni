@@ -1,8 +1,10 @@
 use crate::error::SwapError;
+use crate::signals::proxy_common_signals;
 use crate::{baby_cmd::BabyCommand, init::BabyRx};
 use anyhow::Result;
 use std::time::Duration;
 use tokio::process::{Child, Command};
+use tokio::select;
 
 pub enum SwapVersion {
     // default, naive counter
@@ -137,119 +139,41 @@ pub struct SwapReady {
     pub swap: Swap,
 }
 
-pub async fn run(_sr: SwapReady, _rx: BabyRx) -> Result<i32> {
-    todo!()
-    // bind sigs
-    // wait for finish
-    // listen for swap events
-    // on event, swap!
-    // let cmd_arc: Arc<Mutex<Option<BabyCommand>>> = Arc::new(Mutex::new(Some(cmd_0.clone())));
-
-    // let pid_arc: Arc<std::sync::Mutex<Option<u32>>> = Arc::new(std::sync::Mutex::new(None));
-
-    // let poll_cmd_arc = cmd_arc.clone();
-    // let poll_acid_arc = pid_arc.clone();
-    // let _poller = match args.command {
-    //     cli::Commands::Poll(poll) => {
-    //         tokio::spawn(async move { poll_swap(poll, poll_cmd_arc, &cmd_0, poll_acid_arc).await })
-    //     }
-    //     cli::Commands::Ipc(_) => todo!(),
-    // };
-
-    // // signal proxy
-    // let signal_acid_arc = pid_arc.clone();
-    // let _ = tokio::spawn(async move {
-    //     let mut signals =
-    //         Signals::new(&[SIGHUP, SIGINT, SIGQUIT, SIGABRT, SIGPIPE, SIGALRM, SIGTERM])
-    //             .expect("failed to obtain signals");
-    //     for sig in signals.forever() {
-    //         let id: u32 = {
-    //             let mut id: u32 = 0;
-    //             while id == 0 {
-    //                 let maybe_id = { signal_acid_arc.lock().unwrap().to_owned() };
-    //                 match maybe_id {
-    //                     Some(aid) => {
-    //                         id = aid;
-    //                         break;
-    //                     }
-    //                     None => tokio::time::sleep(Duration::from_millis(10)).await,
-    //                 }
-    //             }
-    //             id
-    //         };
-    //         signal(id, sig).unwrap()
-    //     }
-    // });
-
-    // loop {
-    //     // update active child id s.t. signals can be passed into it
-    //     let before_id: i32 = {
-    //         let x: Option<u32> = pid_arc.lock().unwrap().clone();
-    //         match x {
-    //             Some(x) => i32::try_from(x).unwrap(),
-    //             None => -1,
-    //         }
-    //     };
-
-    //     // wait for child to halt
-    //     let proc_pid_arc = pid_arc.clone();
-    //     let proc_cmd_arc = cmd_arc.clone();
-    //     let proc_result = tokio::spawn(async move {
-    //         let cmd = {
-    //             let cmd: Option<BabyCommand> = *proc_cmd_arc.lock().expect("failed to lock");
-    //             cmd.take()
-    //         };
-    //         match cmd {
-    //             Some(cmd) => {
-    //                 let mut running = cmd.cmd().kill_on_drop(true).spawn().unwrap();
-    //                 // update
-    //                 {
-    //                     let active_id = running.id();
-    //                     if active_id.is_none() {
-    //                         panic!("expected a PID, got none");
-    //                     }
-    //                     *proc_pid_arc.lock().unwrap() = active_id;
-    //                     println!("updating pid to  {}", active_id.unwrap());
-    //                 };
-    //                 // holds the lock across the await. make sure everything you need
-    //                 // concurrently is available to other concurrent workers
-    //                 running.wait().await.map(|status| {
-    //                     println!("@PROC_HALTED WITH {status}");
-    //                     // Getting the exit code apparently isn't so staightforward according to rust.
-    //                     // https://doc.rust-lang.org/std/process/struct.ExitStatus.html#method.code
-    //                     status.code().map_or_else(|| 1, |code| Some(code))
-    //                 })
-    //             }
-    //             None => {
-    //                 return Ok(None);
-    //             }
-    //         }
-    //     })
-    //     .await;
-
-    //     // check if we've swapped
-    //     let after_id: i32 = {
-    //         let x: Option<u32> = pid_arc.lock().unwrap().clone();
-    //         match x {
-    //             Some(x) => i32::try_from(x).unwrap(),
-    //             None => -2,
-    //         }
-    //     };
-    //     dbg!("ok, so were in the loop", before_id, after_id);
-    //     match (after_id.eq(&before_id), proc_result) {
-    //         (true, Ok(Ok(exit_code))) => exit(exit_code),
-    //         (true, Ok(Err(e))) => {
-    //             eprintln!("swap process halted, but child proc failed: {e}");
-    //             return Err(e.to_string());
-    //         }
-    //         (true, Err(msg)) => {
-    //             eprintln!("swap process failed");
-    //             return Err(msg.to_string());
-    //         }
-    //         // continue!
-    //         (false, _) => (),
-    //     }
-    // }
+pub async fn run(sr_0: SwapReady, mut rx: BabyRx) -> Result<i32> {
+    let sr: SwapReady = sr_0;
+    let mut child = sr.child;
+    let mut swap = sr.swap;
+    loop {
+        let pid = child.id().ok_or_else(|| SwapError::FailedChildBootNoPid)?;
+        let signal_proxy_f = proxy_common_signals(pid);
+        select! {
+          halted = child.wait() => {
+            match halted {
+              Ok(status) => {
+                println!("@PROC_HALTED WITH {status}");
+                // Getting the exit code apparently isn't so staightforward according to rust.
+                // https://doc.rust-lang.org/std/process/struct.ExitStatus.html#method.code
+                let code = status.code().map_or_else(|| 1, |code| code);
+                return Ok(code)
+              },
+              Err(e) => return Err({ SwapError::ProcWaitFail { message: e.to_string() } }.into())
+            }
+          }
+          swap_error = signal_proxy_f => {
+            // eager abort on signal error. should have been cancelled out of existence.
+            return Err(swap_error.into())
+          }
+          next_cmd_opt = rx.recv() => {
+            let next_cmd = match next_cmd_opt {
+              Some(sr) => sr,
+              _ => return Err(SwapError::ListenerHalted.into())
+            };
+            let next_sr = swap.swap(&next_cmd).await?;
+            child = next_sr.child;
+            swap = next_sr.swap;
+          }
+        }
+    }
 }
 
 // #[cfg(test)]

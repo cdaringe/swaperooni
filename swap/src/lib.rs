@@ -5,4 +5,5 @@ mod fs;
 pub mod init;
 mod poll;
 pub mod run;
+pub(crate) mod signals;
 pub mod swap;

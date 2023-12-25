@@ -1,22 +1,5 @@
-use swaperooni::run::run_cli;
-// use signal_hook::{
-//     consts::{
-//         SIGABRT,
-//         SIGALRM,
-//         SIGHUP,
-//         SIGINT,
-//         SIGPIPE,
-//         SIGQUIT,
-//         SIGTERM,
-//         // forbidden!
-//         // SIGFPE,
-//         // SIGILL,
-//         // SIGKILL,
-//         // SIGSEGV,
-//     },
-//     iterator::Signals,
-// };
 use std::process::exit;
+use swaperooni::run::run_cli;
 
 #[tokio::main]
 async fn main() -> () {
