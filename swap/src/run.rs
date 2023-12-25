@@ -32,6 +32,7 @@ pub async fn run(sr: SwapReady, rx_swap_request: BabyRx) -> Result<i32> {
             .await
             .id()
             .ok_or(SwapError::FailedChildBootNoPid)?;
+
         let signal_proxy_f = tokio::spawn(async move { proxy_common_signals(pid).await });
         let run_child = child_arc.clone();
 
@@ -45,10 +46,12 @@ pub async fn run(sr: SwapReady, rx_swap_request: BabyRx) -> Result<i32> {
               Err(e) => return Err({ SwapError::ProcWaitFail { message: e.to_string() } }.into())
             }
           }
-          _swap_error = signal_proxy_f => {
+          swap_error = signal_proxy_f => {
             // eager abort on signal error. should have been cancelled out of existence.
-            todo!()
-            // return swap_error
+            return match swap_error {
+              Ok(_) => Err(SwapError::SignalProxyHalted.into()),
+              Err(e) => Err(SwapError::SignalProxyFailed { message: e.to_string()}.into())
+            }
           }
           next_cmd_opt = tokio::spawn(async move { rx_swap_request_arcx.lock().await.recv() }) => {
             let next_cmd = next_cmd_opt?.map_err(|_| SwapError::ListenerHalted)?;
