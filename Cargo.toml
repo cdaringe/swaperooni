@@ -14,7 +14,7 @@ name = "swaperooni"
 path = "src/bin.rs"
 
 [dependencies]
-anyhow = "1.0.76"
+anyhow = "1.0.78"
 async-trait = "0.1.75"
 clap = { version = "4.4.11", features = ["derive", "env"] }
 signal-hook = "0.3.17"
