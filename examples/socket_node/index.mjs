@@ -1,3 +1,8 @@
+/**
+ * @example
+ * SOCKET_PATH=demo.sock cargo run ipc -- node examples/socket_node/index.mjs 0
+ */
+
 import assert from "assert";
 import * as net from "net";
 import { setTimeout } from "timers/promises";
@@ -13,8 +18,9 @@ async function main() {
   const sock = net.connect(socketPath);
   await setTimeout(100);
   const j = i + 1;
-  const cmd = `node swap/examples/socket_node/index.mjs ${j}\n`;
-  console.log(`<-- sending cmd: ${cmd}`);
+  const cmd = `node examples/socket_node/index.mjs ${j}\n`;
+  console.log(`[child] started with id: ${i}`);
+  console.log(`[child] sending cmd: ${cmd}`);
   sock.write(cmd, async (err) => {
     if (err) {
       throw err;

@@ -15,9 +15,10 @@ pub struct Cli {
 #[derive(Clone, Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct PollCmd {
-    /// Name of the person to greet
+    /// Executable to monitor and run
     pub exe: String,
 
+    // Duration (milliseconds) between mtime poll
     #[arg(short = 'i', long, default_value_t = 4_000)]
     pub poll_interval_ms: u64,
 }
