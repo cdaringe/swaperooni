@@ -61,28 +61,29 @@ pub async fn listen_ipc(ipc_cmd: IpcCmd, tx: BabyTx) -> Result<()> {
     }
 }
 
+impl From<Vec<String>> for BabyCommand {
+    fn from(value: Vec<String>) -> Self {
+        if value.len() < 2 {
+            BabyCommand {
+                bin: value.join(" "),
+                args: vec![],
+            }
+        } else {
+            let (a, b) = value.split_at(1);
+            BabyCommand {
+                bin: a[0].clone(),
+                args: b.into(),
+            }
+        }
+    }
+}
+
 impl From<SwapCmd> for Init {
     fn from(swap_cmd: SwapCmd) -> Self {
         let channel: BabyCommandChannel = std::sync::mpsc::channel();
         let cmd = match swap_cmd {
-            SwapCmd::Poll(ref poll) => BabyCommand {
-                bin: poll.exe.clone(),
-                args: vec![],
-            },
-            SwapCmd::Ipc(ref ipc) => {
-                if ipc.cmd.len() < 2 {
-                    BabyCommand {
-                        bin: ipc.cmd.join(" "),
-                        args: vec![],
-                    }
-                } else {
-                    let (a, b) = ipc.cmd.split_at(1);
-                    BabyCommand {
-                        bin: a[0].clone(),
-                        args: b.into(),
-                    }
-                }
-            }
+            SwapCmd::Poll(ref poll) => BabyCommand::from(poll.exe.clone()),
+            SwapCmd::Ipc(ref ipc) => BabyCommand::from(ipc.cmd.clone()),
         };
         Init {
             channel,

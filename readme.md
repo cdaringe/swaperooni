@@ -8,7 +8,7 @@ into the child process.
 
 Supports two hot-reload request options:
 
-- `ipc` - send a newline delimited command string from the child to the swaperooni socket. See [examples/socket_bash/main.sh](examples/socket_bash/main.sh).
+- `ipc` - send a newline delimited command string from the child to the swaperooni socket. See [examples/ipc_bash_hopscotch/main.sh](examples/ipc_bash_hopscotch/main.sh).
 - `poll` - monitor the `mtime` of a file. on change, re-execute it.
 
 **swaperooni is not a supervisor.** `swaperooni` is similar to [tini](https://github.com/krallin/tini).
@@ -22,11 +22,11 @@ You may have cases where swapping child PIDs is more desirable (e.g. oddball doc
 
 See the examples.
 
-- `SOCKET_PATH=demo.sock cargo run ipc -- bash examples/socket_bash/a.sh`
+- `SOCKET_PATH=demo.sock cargo run ipc -- bash examples/ipc_bash_hopscotch/a.sh`
   - program `a` runs momentarily, then requests to be swapped for program `b`. `b` requests program `c`, and `c` gracefully exits.
-- `SOCKET_PATH=demo.sock cargo run ipc -- node examples/socket_node/index.mjs 0`
+- `SOCKET_PATH=demo.sock cargo run ipc -- node examples/ipc_node_counter/index.mjs 0`
   - run a node.js process. the process asks swaperooni to run itself again, but with different params (a counter)
-- `SOCKET_PATH=demo.sock cargo run -- poll --poll-interval-ms=1000 examples/swap_on_file_change/worker-app.sh`
+- `cargo run poll --poll-interval-ms=1000 -- examples/poll_countdown/main.sh 5`
   - poll for entrypoint change and re-run it.
 
 ## Performance

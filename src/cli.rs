@@ -12,7 +12,8 @@ pub struct Cli {
 #[command(author, version, about, long_about = None)]
 pub struct PollCmd {
     /// Executable to monitor and run
-    pub exe: String,
+    #[arg(last = true)]
+    pub exe: Vec<String>,
 
     // Duration (milliseconds) between mtime poll
     #[arg(short = 'i', long, default_value_t = 4_000)]

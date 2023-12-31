@@ -1,6 +1,6 @@
 /**
  * @example
- * SOCKET_PATH=demo.sock cargo run ipc -- node examples/socket_node/index.mjs 0
+ * SOCKET_PATH=demo.sock cargo run ipc -- node examples/ipc_node_counter/index.mjs 0
  */
 
 import assert from "assert";
@@ -15,10 +15,14 @@ assert(socketPath, "SOCKET_PATH not set");
 assert(Number.isInteger(i), "missing param");
 
 async function main() {
+  if (i >= 10) {
+    console.log(`${i} reached, exiting with code 2`);
+    return process.exit(2);
+  }
   const sock = net.connect(socketPath);
   await setTimeout(100);
   const j = i + 1;
-  const cmd = `node examples/socket_node/index.mjs ${j}\n`;
+  const cmd = `node examples/ipc_node_counter/index.mjs ${j}\n`;
   console.log(`[child] started with id: ${i}`);
   console.log(`[child] sending cmd: ${cmd}`);
   sock.write(cmd, async (err) => {
