@@ -3,6 +3,8 @@
 Hot-reload a child process without tearing down the parent PID. Proxies signals
 into the child process.
 
+<img src="./img/jones_swaperooni.webp" width="480px" />
+
 - if the child exits, `swaperooni` exits with the same code.
 - if a swap request is issued, the child is torn down, and new child brought up.
 
