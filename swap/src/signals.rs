@@ -13,14 +13,17 @@ use signal_hook::{
         // SIGKILL,
         // SIGSEGV,
     },
-    iterator::Signals,
+    iterator::{Signals, SignalsInfo},
 };
 
 use crate::{error::SwapError, swap::signal};
 
-pub async fn proxy_common_signals(pid: u32) -> SwapError {
-    let mut signals = Signals::new([SIGHUP, SIGINT, SIGQUIT, SIGABRT, SIGPIPE, SIGALRM, SIGTERM])
-        .expect("failed to obtain signals");
+pub fn make_signals() -> SignalsInfo {
+    Signals::new([SIGHUP, SIGINT, SIGQUIT, SIGABRT, SIGPIPE, SIGALRM, SIGTERM])
+        .expect("failed to obtain signals")
+}
+
+pub async fn proxy_common_signals(mut signals: SignalsInfo, pid: u32) -> SwapError {
     for sig in signals.forever() {
         match signal(pid, sig).await {
             Ok(_) => (),

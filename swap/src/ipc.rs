@@ -3,7 +3,6 @@ use anyhow::Result;
 use tokio::{io::AsyncReadExt, net::UnixStream};
 
 pub async fn read_forever(stream: &mut UnixStream, tx: &BabyTx) -> Result<()> {
-    eprintln!("setting up listenenr");
     let mut buff = vec![0; 4095];
     loop {
         let read = stream.read(&mut buff).await?;
@@ -18,9 +17,8 @@ pub async fn read_forever(stream: &mut UnixStream, tx: &BabyTx) -> Result<()> {
                         message: e.to_string(),
                     }
                 })?;
-                let cmd = utf8_str.split("\n").find(|_| true).unwrap();
-                eprintln!("cmd received: {cmd}");
-                let (bin, args) = match cmd.split_once(" ") {
+                let cmd = utf8_str.split('\n').find(|_| true).unwrap();
+                let (bin, args) = match cmd.split_once(' ') {
                     Some((bin, args_str)) => (bin, args_str.split_whitespace().collect()),
                     None => (cmd, vec![]),
                 };

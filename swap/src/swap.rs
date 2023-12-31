@@ -3,7 +3,10 @@ use crate::error::SwapError;
 use anyhow::Result;
 
 use std::time::Duration;
-use tokio::process::{Child, Command};
+use tokio::{
+    process::{Child, Command},
+    select,
+};
 
 pub enum SwapVersion {
     // default, naive counter
@@ -77,13 +80,26 @@ pub async fn signal(pid: u32, signal: i32) -> Result<()> {
         })?
 }
 
+pub async fn teardown(pid: u32) -> Result<()> {
+    let sigterm_fut = signal(pid, 15);
+    let sigkill_timeout_fut = async {
+        tokio::time::sleep(Duration::from_secs(5)).await;
+        let _ = signal(pid, 9).await;
+    };
+    select! {
+      _ = sigterm_fut => (),
+      _ = sigkill_timeout_fut => (),
+    };
+    Ok(())
+}
+
 impl Swap {
     pub async fn swap_version(
         self,
         cmd: &BabyCommand,
         // version: SwapVersion,
     ) -> Result<SwapReady> {
-        let _ = signal(self.pid, 9).await;
+        // let _ = signal(self.pid, 9).await;
         let (pid, child) = get_pid_and_child(cmd).await?;
         let next_count = self.count + 1;
         Ok(SwapReady {

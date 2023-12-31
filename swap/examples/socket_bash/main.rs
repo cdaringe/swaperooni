@@ -28,8 +28,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let mut i = 0;
     loop {
-        dbg!("loopin");
-
         match inbound {
             None => (),
             Some(ref mut x) => {
