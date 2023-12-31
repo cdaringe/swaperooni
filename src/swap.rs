@@ -32,7 +32,7 @@ pub struct Swap {
 }
 
 fn run_cmd(cmd: &BabyCommand) -> Result<Child> {
-    cmd.cmd()
+    tokio::process::Command::from(cmd)
         .kill_on_drop(true)
         .spawn()
         .map_err(|e| SwapError::FailedChildBoot(e.to_string()).into())

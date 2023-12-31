@@ -11,9 +11,3 @@ impl From<&BabyCommand> for tokio::process::Command {
         cmd
     }
 }
-
-impl BabyCommand {
-    pub fn cmd(&self) -> tokio::process::Command {
-        self.into()
-    }
-}
