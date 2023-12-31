@@ -9,8 +9,8 @@ use anyhow::Result;
 use clap::Parser;
 use core::panic;
 use std::sync::Arc;
+use tokio::select;
 use tokio::sync::Mutex;
-use tokio::{process::Child, select};
 
 pub async fn run_cli() -> Result<i32> {
     let args = Cli::parse();
