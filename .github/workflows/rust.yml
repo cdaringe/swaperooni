@@ -24,4 +24,4 @@ jobs:
           # Examples: 12.x, 10.15.1, >=10.15.0, lts/Hydrogen, 16-nightly, latest, node
           node-version: "node"
       - name: Run tests
-        run: rm demo.sock || true && cargo test --verbose -- --test-threads 1
+        run: cargo test --verbose -- --test-threads 1
