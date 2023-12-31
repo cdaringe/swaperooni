@@ -73,14 +73,17 @@ pub async fn run(sr: SwapReady, rx_swap_request: BabyRx) -> Result<i32> {
             signals_handle.close();
             let _ = signal_thread.take(); // empty it out baby
 
-
-            // setup the swapped cmd
+            // tear down the last proc
             let _ = teardown(pid).await;
             let _ = child_arc_swap.lock().await.wait().await;
+
+            // setup the swapped cmd
             let next_cmd = next_cmd_opt?.map_err(|_| SwapError::ListenerHalted)?;
             let next_sr = swap.swap(&next_cmd).await?;
             *child_arc.lock().await = next_sr.child;
             swap = next_sr.swap;
+
+            // ...and lett'er loop to kickstart the next next
           }
         }
     }

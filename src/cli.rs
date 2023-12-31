@@ -1,7 +1,3 @@
-// swaperooni --poll-exe-mtime=foo -- bar
-// swaperooni --pipe=/dev/swapper -- node server
-// swaperooni --ipc-cmd=/dev/swapper --wait-for-first
-
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]

@@ -1,3 +1,4 @@
+/// A simplified representation of std::process::Command
 #[derive(Clone, Debug)]
 pub struct BabyCommand {
     pub bin: String,
