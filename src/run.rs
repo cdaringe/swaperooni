@@ -43,7 +43,7 @@ pub async fn run(sr: SwapReady, rx_swap_request: BabyRx) -> Result<i32> {
             tokio::spawn(async move { proxy_common_signals(signals, pid).await })
         }));
 
-        let child_arc_swap: Arc<Mutex<Child>> = child_arc.clone();
+        let child_arc_swap = child_arc.clone();
         let child_arc_halted = child_arc.clone();
 
         let rx_swap_request_arcx = rx_swap_request_arc.clone();
