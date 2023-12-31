@@ -1,14 +1,17 @@
 use crate::{
     baby_cmd::BabyCommand,
-    cli::{PollCmd, SwapCmd},
+    cli::{IpcCmd, PollCmd, SwapCmd},
     error::SwapError,
+    ipc::read_forever,
     poll::poll_modified,
 };
 use anyhow::Result;
 use std::{
     future::Future,
+    pin::Pin,
     sync::mpsc::{Receiver, Sender},
 };
+use tokio::net::UnixListener;
 
 pub type BabyTx = Sender<BabyCommand>;
 pub type BabyRx = Receiver<BabyCommand>;
@@ -28,24 +31,34 @@ impl Init {
             swap_cmd: command,
         } = self;
         let (tx, rx) = channel;
-        (
-            match command {
-                SwapCmd::Poll(poll) => listen(poll, cmd.clone(), tx),
-                SwapCmd::Ipc(_) => todo!(),
-            },
-            cmd,
-            rx,
-        )
+        let listener = match command {
+            SwapCmd::Poll(poll) => Box::pin(listen_poll(poll, cmd.clone(), tx))
+                as Pin<Box<dyn Future<Output = Result<()>>>>,
+            SwapCmd::Ipc(ipc_cmd) => Box::pin(listen_ipc(ipc_cmd, tx)),
+        };
+        (listener, cmd, rx)
     }
 }
 
-pub async fn listen(poll: PollCmd, cmd: BabyCommand, tx: BabyTx) -> Result<()> {
+// on modified, re-emit cmd
+pub async fn listen_poll(poll: PollCmd, cmd: BabyCommand, tx: BabyTx) -> Result<()> {
     let next_cmd = cmd.clone();
     poll_modified(poll, || {
         tx.send(next_cmd.clone())
             .map_err(|_| SwapError::ListenerChannelDown.into())
     })
     .await
+}
+
+// accept new cmd over ipc
+pub async fn listen_ipc(ipc_cmd: IpcCmd, tx: BabyTx) -> Result<()> {
+    let path = ipc_cmd.socket_path;
+    let _ = std::fs::remove_file(&path);
+    let rx = UnixListener::bind(path)?;
+    loop {
+        let (mut stream, _addr) = rx.accept().await?;
+        read_forever(&mut stream, &tx).await?;
+    }
 }
 
 impl From<SwapCmd> for Init {
@@ -56,12 +69,25 @@ impl From<SwapCmd> for Init {
                 bin: poll.exe.clone(),
                 args: vec![],
             },
-            SwapCmd::Ipc(_) => todo!(),
+            SwapCmd::Ipc(ref ipc) => {
+                if ipc.cmd.len() < 2 {
+                    BabyCommand {
+                        bin: ipc.cmd.join(" "),
+                        args: vec![],
+                    }
+                } else {
+                    let (a, b) = ipc.cmd.split_at(1);
+                    BabyCommand {
+                        bin: a[0].clone(),
+                        args: b.into(),
+                    }
+                }
+            }
         };
         Init {
-            swap_cmd,
-            cmd,
             channel,
+            cmd,
+            swap_cmd,
         }
     }
 }

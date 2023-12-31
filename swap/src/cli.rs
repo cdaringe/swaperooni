@@ -31,9 +31,8 @@ pub enum SwapCmd {
 #[derive(Clone, Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct IpcCmd {
-    // /// Number of times to greet
-    // #[arg(short, long, default_value_t = 1)]
-    // count: u8,
+    #[arg(short = 's', long, env = "SOCKET_PATH")]
+    pub socket_path: String,
     #[arg(last = true)]
     pub cmd: Vec<String>,
 }

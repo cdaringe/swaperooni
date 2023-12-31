@@ -2,7 +2,10 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum SwapError {
-    #[error("failed to boot child process")]
+    #[error("bad cli input")]
+    BadCliInput,
+
+    #[error("failed to boot child process: {0}")]
     FailedChildBoot(String),
 
     #[error("child process reported no PID")]
@@ -19,6 +22,9 @@ pub enum SwapError {
 
     #[error("swap event listener halted")]
     ListenerHalted,
+
+    #[error("invalid cmd received over socket")]
+    ListenerSocketInvalidCmd { message: String },
 
     #[error("signal proxy failed: {message}")]
     SignalProxyFailed { message: String },

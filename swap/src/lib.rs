@@ -3,6 +3,7 @@ pub mod cli;
 pub mod error;
 mod fs;
 pub mod init;
+pub(crate) mod ipc;
 mod poll;
 pub mod run;
 pub(crate) mod signals;

@@ -83,7 +83,7 @@ impl Swap {
         cmd: &BabyCommand,
         // version: SwapVersion,
     ) -> Result<SwapReady> {
-        signal(self.pid, 9).await?;
+        let _ = signal(self.pid, 9).await;
         let (pid, child) = get_pid_and_child(cmd).await?;
         let next_count = self.count + 1;
         Ok(SwapReady {
