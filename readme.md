@@ -21,3 +21,14 @@ You may have cases where swapping child PIDs is more desirable (e.g. oddball doc
 ## How
 
 See the examples.
+
+- `SOCKET_PATH=demo.sock cargo run ipc -- bash examples/socket_bash/a.sh`
+  - program `a` runs momentarily, then requests to be swapped for program `b`. `b` requests program `c`, and `c` gracefully exits.
+- `SOCKET_PATH=demo.sock cargo run ipc -- node examples/socket_node/index.mjs 0`
+  - run a node.js process. the process asks swaperooni to run itself again, but with different params (a counter)
+- `SOCKET_PATH=demo.sock cargo run -- poll --poll-interval-ms=1000 examples/swap_on_file_change/worker-app.sh`
+  - poll for entrypoint change and re-run it.
+
+## Performance
+
+Well, it is <1MB and does nothing _most_ of the time.

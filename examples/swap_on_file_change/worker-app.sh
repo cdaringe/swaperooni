@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -eo pipefail
 while true; do
-  echo "Greetingsz from procces id: $1"
+  echo "Change this text!"
   sleep 1
 done
