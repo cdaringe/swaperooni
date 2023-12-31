@@ -3,6 +3,10 @@ name = "swaperooni"
 version = "0.1.0"
 edition = "2021"
 exclude = ["img/", "examples/", ".github/", "renovate.json"]
+authors = ["cdaringe<cdaringe@gmail.com>"]
+description = "Hot-reload child process in response to user provided events. Proxies signals into the child process."
+repository = "https://github.com/cdaringe/swaperooni"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
