@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -eo pipefail
+
 echo "[a] Greetings from examples/ipc_bash_hopscotch/a.sh"
 sleep 1
 

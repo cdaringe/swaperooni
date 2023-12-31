@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -eo pipefail
+
 echo "[b] Guten tag from examples/ipc_bash_hopscotch/b.sh"
 sleep 1
 

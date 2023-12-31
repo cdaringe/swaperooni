@@ -15,8 +15,9 @@ use tokio::sync::Mutex;
 pub async fn run_cli() -> Result<i32> {
     let args = Cli::parse();
     let (swap_listener, cmd, rx_swap_request) = Init::from(args.command).to_tup();
+    let started = async { swap_listener.await };
     select! {
-      _ = swap_listener => Err(SwapError::ListenerHalted.into()),
+      _ = started => Err(SwapError::ListenerHalted.into()),
       it = run(SwapBuilder::new(&cmd).start().await?, rx_swap_request) => it,
     }
 }

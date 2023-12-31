@@ -21,25 +21,35 @@ mod tests {
         process::{Command, Stdio},
     };
 
-    fn test_cmd(cmd: &str, args: Vec<&str>, exit_code: i32, lines: Vec<&str>) {
-        let mut child = Command::new(cmd)
+    fn test_cmd(args: Vec<&str>, exit_code: i32, lines: Vec<&str>) {
+        Command::new("cargo")
+            .args(["build", "--release"])
+            .spawn()
+            .unwrap();
+
+        let mut child = Command::new("./target/release/swaperooni")
             .args(args)
+            .stderr(Stdio::piped())
             .stdout(Stdio::piped())
             .env("SOCKET_PATH", "demo.sock")
             .spawn()
             .unwrap();
         let exit_status = child.wait().unwrap();
-        let buf = BufReader::new(child.stdout.unwrap());
-        let actual_lines = buf.lines().map(|l| l.unwrap()).collect::<Vec<String>>();
-        assert_eq!(actual_lines, lines);
+        let err_buf = BufReader::new(child.stderr.unwrap());
+        let err_lines: Vec<String> = err_buf.lines().map(|l| l.unwrap()).collect::<Vec<String>>();
+        let empty_lines: Vec<String> = vec![];
+        let out_buf = BufReader::new(child.stdout.unwrap());
+        let out_lines = out_buf.lines().map(|l| l.unwrap()).collect::<Vec<String>>();
+        print!("stderr:\n{err_lines:?}\n\nstdout:\n{out_lines:?}");
+        assert_eq!(err_lines, empty_lines);
         assert_eq!(exit_status.code().unwrap(), exit_code);
+        assert_eq!(out_lines, lines);
     }
 
     #[test]
     fn it_runs_poll_mode() {
         test_cmd(
-            "cargo",
-            "run poll --poll-interval-ms=1000 -- examples/poll_countdown/main.sh 2"
+            "poll --poll-interval-ms=1000 -- examples/poll_countdown/main.sh 2"
                 .split(' ')
                 .collect(),
             0,
@@ -54,8 +64,7 @@ mod tests {
     #[test]
     fn it_runs_ipc_hopscotch() {
         test_cmd(
-            "cargo",
-            "run ipc -- bash examples/ipc_bash_hopscotch/a.sh"
+            "ipc -- bash examples/ipc_bash_hopscotch/a.sh"
                 .split(' ')
                 .collect(),
             0,
@@ -71,8 +80,7 @@ mod tests {
     #[test]
     fn it_runs_ipc_counter() {
         test_cmd(
-            "cargo",
-            "run ipc -- node examples/ipc_node_counter/index.mjs 8"
+            "ipc -- node examples/ipc_node_counter/index.mjs 8"
                 .split(' ')
                 .collect(),
             2,
