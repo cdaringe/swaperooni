@@ -3,7 +3,7 @@
 Hot-reload a child process without tearing down the parent PID. Proxies signals
 into the child process.
 
-<img src="./img/jones_swaperooni.webp" width="480px" />
+<img src="./img/swaperooni.webp" width="480px" />
 
 [![Rust](https://github.com/cdaringe/swaperooni/actions/workflows/rust.yml/badge.svg)](https://github.com/cdaringe/swaperooni/actions/workflows/rust.yml)
 
