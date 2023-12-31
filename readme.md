@@ -5,6 +5,8 @@ into the child process.
 
 <img src="./img/jones_swaperooni.webp" width="480px" />
 
+[![Rust](https://github.com/cdaringe/swaperooni/actions/workflows/rust.yml/badge.svg)](https://github.com/cdaringe/swaperooni/actions/workflows/rust.yml)
+
 - if the child exits, `swaperooni` exits with the same code.
 - if a swap request is issued, the child is torn down, and new child brought up.
 
