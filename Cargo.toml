@@ -20,8 +20,8 @@ path = "src/bin.rs"
 
 [dependencies]
 anyhow = "1.0.78"
-async-trait = "0.1.75"
-clap = { version = "4.4.11", features = ["derive", "env"] }
+async-trait = "0.1.76"
+clap = { version = "4.4.12", features = ["derive", "env"] }
 scopeguard = "1.2.0"
 signal-hook = "0.3.17"
 thiserror = "1.0.51"
