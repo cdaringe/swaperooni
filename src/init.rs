@@ -6,6 +6,7 @@ use crate::{
     poll::poll_modified,
 };
 use anyhow::Result;
+use scopeguard::defer;
 use std::{
     future::Future,
     pin::Pin,
@@ -54,7 +55,10 @@ pub async fn listen_poll(poll: PollCmd, cmd: BabyCommand, tx: BabyTx) -> Result<
 pub async fn listen_ipc(ipc_cmd: IpcCmd, tx: BabyTx) -> Result<()> {
     let path = ipc_cmd.socket_path;
     let _ = std::fs::remove_file(&path);
-    let rx = UnixListener::bind(path)?;
+    let rx = UnixListener::bind(&path)?;
+    defer! {
+      let _ = std::fs::remove_file(&path);
+    }
     loop {
         let (mut stream, _addr) = rx.accept().await?;
         read_forever(&mut stream, &tx).await?;

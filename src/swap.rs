@@ -8,27 +8,8 @@ use tokio::{
     select,
 };
 
-pub enum SwapVersion {
-    // default, naive counter
-    Counter(usize),
-    // user specified version
-    UserVersion(usize),
-    // user JSONpayload
-    JsonVersion(String),
-}
-
-impl From<usize> for SwapVersion {
-    fn from(value: usize) -> Self {
-        SwapVersion::Counter(value)
-    }
-}
-
 pub struct Swap {
-    // if it doesn't have a pid, we're not swapping.
     pub pid: u32,
-    pub current_cmd: BabyCommand,
-    // history: Vec<SwapVersion>,
-    count: usize,
 }
 
 fn run_cmd(cmd: &BabyCommand) -> Result<Child> {
@@ -40,7 +21,7 @@ fn run_cmd(cmd: &BabyCommand) -> Result<Child> {
 
 async fn get_pid_and_child(cmd: &BabyCommand) -> Result<(u32, Child)> {
     let mut child = run_cmd(cmd)?;
-    let pc = tokio::spawn(async move {
+    Ok(async move {
         let mut tries = 10;
         while tries > 0 {
             let _ = child
@@ -55,12 +36,10 @@ async fn get_pid_and_child(cmd: &BabyCommand) -> Result<(u32, Child)> {
             tries -= 1;
         }
         Err(SwapError::FailedChildBoot(
-            "could not get child pid".to_owned(),
+            "failed to get pid for process attempting to launch".to_owned(),
         ))
-    })
-    .await??;
-
-    Ok(pc)
+    }
+    .await?)
 }
 
 pub async fn signal(pid: u32, signal: i32) -> Result<()> {
@@ -94,26 +73,12 @@ pub async fn teardown(pid: u32) -> Result<()> {
 }
 
 impl Swap {
-    pub async fn swap_version(
-        self,
-        cmd: &BabyCommand,
-        // version: SwapVersion,
-    ) -> Result<SwapReady> {
-        // let _ = signal(self.pid, 9).await;
+    pub async fn swap(self, cmd: &BabyCommand) -> Result<SwapReady> {
         let (pid, child) = get_pid_and_child(cmd).await?;
-        let next_count = self.count + 1;
         Ok(SwapReady {
             child,
-            swap: Swap {
-                pid,
-                current_cmd: cmd.clone(),
-                count: next_count,
-            },
+            swap: Swap { pid },
         })
-    }
-
-    pub async fn swap(self, cmd: &BabyCommand) -> Result<SwapReady> {
-        self.swap_version(cmd).await //, { self.count + 1 }.into()).await
     }
 }
 
@@ -122,24 +87,17 @@ pub struct SwapBuilder {
 }
 
 impl SwapBuilder {
-    pub fn new_version(cmd: &BabyCommand, _version: SwapVersion) -> SwapBuilder {
+    pub fn new(cmd: &BabyCommand) -> SwapBuilder {
         SwapBuilder {
             cmd: cmd.to_owned(),
         }
-    }
-    pub fn new(cmd: &BabyCommand) -> SwapBuilder {
-        Self::new_version(cmd, 1.into())
     }
 
     pub async fn start(self) -> Result<SwapReady> {
         let (pid, child) = get_pid_and_child(&self.cmd).await?;
         Ok(SwapReady {
             child,
-            swap: Swap {
-                pid,
-                current_cmd: self.cmd,
-                count: 1,
-            },
+            swap: Swap { pid },
         })
     }
 }

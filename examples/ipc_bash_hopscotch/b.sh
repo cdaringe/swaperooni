@@ -8,4 +8,4 @@ sleep 1
 echo 'bash examples/ipc_bash_hopscotch/c.sh' | nc -w 1 -U "$SOCKET_PATH"
 
 # wait for b to swapped out
-exec bash examples/ipc_bash_hopscotch/sleep.sh
+sleep 60
