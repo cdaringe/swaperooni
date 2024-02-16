@@ -21,7 +21,7 @@ path = "src/bin.rs"
 [dependencies]
 anyhow = "1.0.79"
 async-trait = "0.1.77"
-clap = { version = "4.5.0", features = ["derive", "env"] }
+clap = { version = "4.5.1", features = ["derive", "env"] }
 scopeguard = "1.2.0"
 signal-hook = "0.3.17"
 thiserror = "1.0.57"
