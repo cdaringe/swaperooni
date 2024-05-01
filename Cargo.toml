@@ -25,7 +25,7 @@ clap = { version = "4.5.4", features = ["derive", "env"] }
 scopeguard = "1.2.0"
 signal-hook = "0.3.17"
 thiserror = "1.0.59"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.37.0", features = ["full"] }
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.
